@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  /* Fonts overrides */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+
+  /* Custom palette colors */
+  --color-brand-cream: #F4F0EA;
+  --color-brand-beige: #F3EFE9;
+  --color-brand-sand: #EAE3D8;
+  --color-brand-dark: #2C2A29;
+  --color-brand-bronze: #BFA280;
+  --color-brand-charcoal: #1C1B1A;
+
+  /* Custom animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-fade-in: fadeIn 1.2s ease-out forwards;
+  --animate-slide-up: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in-delay: fadeIn 1.2s ease-out 0.4s forwards;
+  --animate-slide-up-delay: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+  --animate-slide-up-delay-more: slideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(24px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
+
+/* Custom CSS Scrollbar and utility class to ensure smooth performance */
+html, body {
+  font-family: var(--font-sans);
+  background-color: var(--color-brand-cream);
+  color: var(--color-brand-dark);
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Base custom styles for Glassmorphism */
+.glass-effect {
+  background: rgba(253, 251, 247, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass-dark-effect {
+  background: rgba(28, 27, 26, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Dark Chrome / Negro Metalizado typography effect */
+.dark-chrome-text {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  font-style: italic;
+  background: linear-gradient(
+    135deg,
+    #111111 0%,
+    #444444 20%,
+    #ffffff 40%,
+    #0a0a0a 45%,
+    #222222 55%,
+    #cccccc 70%,
+    #111111 85%,
+    #000000 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
+  animation: shine-chrome 15s ease-in-out infinite;
+}
+
+@keyframes shine-chrome {
+  0% { background-position: 0% 50% }
+  50% { background-position: 100% 50% }
+  100% { background-position: 0% 50% }
+}
+
+/* Button shimmer effect (fast, subtle) */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.4s ease-out;
+  pointer-events: none;
+}
+.btn-shimmer:hover::before {
+  left: 160%;
+}
+
+/* Login page mirror frame — gradient border wrapper technique */
+.login-mirror-frame {
+  background: linear-gradient(135deg, #A0A0A0, #EBEBEB, #787878, #DEDEDE, #B0B0B0);
+  transition: background 0.5s ease-out, box-shadow 0.5s ease-out;
+}
+.login-mirror-frame:hover {
+  background: linear-gradient(135deg, #C8C8C8, #F8F8F8, #A8A8A8, #F4F4F4, #D0D0D0);
+  box-shadow: 0 12px 48px rgba(192, 192, 192, 0.55);
+}
+
+/* Subtle content-area texture/pattern to add warmth (very low opacity) */
+.content-bg {
+  position: relative;
+}
+.content-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(90deg, rgba(44,42,41,0.03) 0 1px, transparent 1px 28px);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+button, a, [role="button"], select {
+  cursor: pointer;
+}
