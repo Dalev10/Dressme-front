@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronRight, ChevronDown, Loader2, LogOut } from 'lucide-react';
 import StyleCard from '../components/StyleCard';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
-const OnboardingPage = ({ user, onCalibrationCompleted }) => {
+const OnboardingPage = ({ user, onLogout, onCalibrationCompleted }) => {
   const [cards, setCards] = useState([]);
   const [selections, setSelections] = useState(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchStyleCards = async () => {
     try {
@@ -134,17 +146,35 @@ const OnboardingPage = ({ user, onCalibrationCompleted }) => {
             {progressText}
           </div>
 
-          <div className="flex items-center gap-3">
-            {user?.profilePicture && (
-              <img
-                src={user.profilePicture}
-                alt={user.displayName}
-                className="w-8 h-8 rounded-full border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1"
-              />
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              onClick={() => setProfileMenuOpen(v => !v)}
+              className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+            >
+              {user?.profilePicture && (
+                <img
+                  src={user.profilePicture}
+                  alt={user.displayName}
+                  className="w-8 h-8 rounded-full border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1"
+                />
+              )}
+              <span className="text-sm font-medium text-brand-dark">
+                {user?.displayName || 'Usuario'}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-brand-dark/50" />
+            </button>
+
+            {profileMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 glass-effect rounded-2xl shadow-xl p-2 w-44 border border-white/40 z-50">
+                <button
+                  onClick={() => { setProfileMenuOpen(false); onLogout?.(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-brand-dark hover:bg-brand-dark/5 transition-colors text-left text-sm font-medium"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar sesión
+                </button>
+              </div>
             )}
-            <span className="text-sm font-medium text-brand-dark">
-              {user?.displayName || 'Usuario'}
-            </span>
           </div>
         </div>
       </header>

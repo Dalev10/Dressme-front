@@ -108,6 +108,7 @@ const OutfitsPage = ({
     return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   };
 
+  // TODO: conectar con POST /api/v1/outfits/generate cuando el endpoint exista
   const handleGenerate = () => {
     setLoading(true);
     setGenerated(false);
