@@ -10,7 +10,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const POLL_INTERVAL_MS = 2500;
 const POLL_TIMEOUT_MS  = 60000;
 
-const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = false, onPrendaGuardada = () => {} }) => {
+const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = false, onPrendaGuardada = () => {}, editCatalog: editCatalogProp }) => {
   const [isDragging,       setIsDragging]       = useState(false);
   const [isUploading,      setIsUploading]       = useState(false);
   const [isAnalyzing,      setIsAnalyzing]       = useState(false);
@@ -22,27 +22,14 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
   const [editedData,       setEditedData]        = useState({});
   const [showConfirmModal, setShowConfirmModal]  = useState(false);
   const [previewUrl,       setPreviewUrl]        = useState(null);
-  const [editCatalog,      setEditCatalog]       = useState({ categories: [], styles: [] });
+  const editCatalog = editCatalogProp ?? { categories: [], styles: [] };
   const [isSaving,         setIsSaving]          = useState(false);
 
-  const fileInputRef   = useRef(null);
-  const profileMenuRef = useRef(null);
-  const pollTimerRef   = useRef(null);
-
-  // ── Catalog for edit dropdowns ────────────────────────────────────────────────
-
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) return;
-    fetch(`${apiBaseUrl}/api/v1/wardrobe/catalog/edit`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setEditCatalog(data);
-      })
-      .catch(() => {});
-  }, []);
+  const fileInputRef      = useRef(null);
+  const profileMenuRef    = useRef(null);
+  const pollTimerRef      = useRef(null);
+  const editCatalogRef    = useRef(editCatalog);
+  useEffect(() => { editCatalogRef.current = editCatalog; }, [editCatalog]);
 
   // ── Preview URL ───────────────────────────────────────────────────────────────
 
@@ -124,6 +111,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
 
         if (detail.isProcessed) {
           setIsAnalyzing(false);
+          const catEntry = editCatalogRef.current.categories.find(c => c.id === detail.categoryId);
           setAiResult({
             id:          detail.id,
             imageUrl:    detail.imageUrl,
@@ -132,8 +120,8 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
             color:       detail.colorName       ?? '—',
             ocasion:     detail.occasionName    ?? '—',
             clima:       detail.weatherName     ?? '—',
-            // IDs para el PATCH si el usuario edita
             categoryId:  detail.categoryId,
+            typeId:      catEntry?.parentId ?? detail.categoryId,
             styleId:     detail.styleId,
           });
         } else if (Date.now() < deadline) {
@@ -170,6 +158,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
     try {
       const formData = new FormData();
       formData.append('image', selectedFile);
+      formData.append('userId', user?.id ?? localStorage.getItem('userId'));
 
       const token    = localStorage.getItem('authToken');
       const response = await fetch(`${apiBaseUrl}/api/v1/wardrobe/upload`, {
@@ -185,6 +174,9 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
       }
 
       const item = await response.json();
+      // La prenda es un borrador hasta que el usuario confirme con "Aceptar y guardar".
+      // Guardamos el id para poder descartarla si cierra el modal o recarga la página.
+      localStorage.setItem('pending_clothing_id', item.id);
       setIsUploading(false);
       setIsAnalyzing(true);
       pollDetail(item.id, Date.now() + POLL_TIMEOUT_MS);
@@ -203,17 +195,42 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
       category:   editedData.categoryName  ?? prev.category,
       style:      editedData.styleName     ?? prev.style,
       categoryId: editedData.categoryId    ?? prev.categoryId,
+      typeId:     editedData.typeId        ?? prev.typeId,
       styleId:    editedData.styleId       ?? prev.styleId,
       _edited:    true,
     }));
     setEditMode(false);
   };
 
+  // ── Discard draft ─────────────────────────────────────────────────────────────
+  // Borra la prenda no confirmada. Se llama al cerrar el modal sin guardar.
+
+  const discardDraft = useCallback(() => {
+    const clothingId = aiResult?.id ?? localStorage.getItem('pending_clothing_id');
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    localStorage.removeItem('pending_clothing_id');
+    setAiResult(null);
+    setEditMode(false);
+    setEditedData({});
+    setIsAnalyzing(false);
+
+    if (clothingId) {
+      const token  = localStorage.getItem('authToken');
+      const userId = user?.id ?? localStorage.getItem('userId');
+      fetch(`${apiBaseUrl}/api/v1/wardrobe/${clothingId}?userId=${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+  }, [aiResult, user]);
+
   // ── Accept & save ─────────────────────────────────────────────────────────────
 
   const handleAccept = async () => {
     if (!aiResult?.id) return;
     setIsSaving(true);
+    // Confirmada: ya no es borrador.
+    localStorage.removeItem('pending_clothing_id');
 
     try {
       // If user manually edited category or style, PATCH to backend
@@ -228,8 +245,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              // typeId = same as categoryId in this simplified flow
-              typeId:     aiResult.categoryId,
+              typeId:     aiResult.typeId ?? aiResult.categoryId,
               categoryId: aiResult.categoryId,
               styleId:    aiResult.styleId,
             }),
@@ -378,7 +394,11 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
               {isUploading ? 'Subiendo...' : isAnalyzing ? 'Analizando...' : 'Sube tu prenda →'}
             </button>
             <button
-              onClick={() => onUploadComplete && onUploadComplete()}
+              onClick={() => {
+                // Si hay un borrador sin confirmar (análisis en curso), descártalo antes de salir.
+                if (localStorage.getItem('pending_clothing_id')) discardDraft();
+                onUploadComplete && onUploadComplete();
+              }}
               className="px-8 py-4 rounded-full font-semibold text-base md:text-lg transition-all duration-300 border-2 border-brand-dark text-brand-dark hover:bg-brand-dark/5"
             >
               {isFirstTime ? 'Continuar' : 'Salir'}
@@ -392,7 +412,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
         <div className="fixed inset-0 bg-brand-dark/60 z-[100] flex items-center justify-center p-8">
           <div className="relative bg-white rounded-3xl overflow-hidden flex w-full max-w-4xl max-h-[90vh] shadow-[0_32px_80px_rgba(44,42,41,0.25)] border-4 border-gray-300/50">
             <button
-              onClick={() => { setAiResult(null); setEditMode(false); }}
+              onClick={discardDraft}
               className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-brand-dark/15 bg-transparent text-brand-dark/50 hover:text-brand-dark hover:border-brand-dark/30 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -458,13 +478,22 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
                           value={editedData.categoryId ?? ''}
                           onChange={(e) => {
                             const cat = editCatalog.categories.find(c => c.id === e.target.value);
-                            setEditedData(p => ({ ...p, categoryId: e.target.value, categoryName: cat?.name ?? '' }));
+                            setEditedData(p => ({
+                              ...p,
+                              categoryId:   e.target.value,
+                              categoryName: cat?.name ?? '',
+                              typeId:       cat?.parentId ?? e.target.value,
+                            }));
                           }}
                           className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
                         >
                           <option value="">— Selecciona —</option>
-                          {parentCategories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          {parentCategories.map(parent => (
+                            <optgroup key={parent.id} label={parent.name}>
+                              {childrenOf(parent.id).map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </optgroup>
                           ))}
                         </select>
                         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
