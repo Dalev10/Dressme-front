@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import OnboardingPage from './pages/OnboardingPage';
@@ -9,7 +9,8 @@ import OutfitsPage from './pages/OutfitsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import ConfigPage from './pages/ConfigPage';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+const apiBaseUrl     = import.meta.env.VITE_API_BASE_URL     ?? 'http://localhost:8080';
+const backServiceUrl = import.meta.env.VITE_BACK_SERVICE_URL ?? 'http://localhost:8081';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -29,7 +30,47 @@ function App() {
   const [isFirstTimeUpload, setIsFirstTimeUpload] = useState(false);
   const [wardrobeItems, setWardrobeItems]         = useState([]);
   const [catalog, setCatalog]                     = useState({ occasions: [], weathers: [] });
+  const [editCatalog, setEditCatalog]             = useState({ categories: [], styles: [] });
   const [favoritosData, setFavoritosData]         = useState([]);
+
+  // ── Carga inicial para sesiones ya activas (refresh de página) ───────────────
+
+  useEffect(() => {
+    const token  = localStorage.getItem('authToken');
+    const userId = user?.id;
+    if (!token || !userId) return;
+    const controller = new AbortController();
+
+    // Limpiar prenda borrador huérfana: el usuario subió una prenda pero cerró/recargó
+    // la página sin confirmar con "Aceptar y guardar". No debe quedar en el armario.
+    const pendingDraftId = localStorage.getItem('pending_clothing_id');
+    const cleanupDraft = pendingDraftId
+      ? fetch(`${apiBaseUrl}/api/v1/wardrobe/${pendingDraftId}?userId=${userId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }).catch(() => {}).finally(() => localStorage.removeItem('pending_clothing_id'))
+      : Promise.resolve();
+
+    cleanupDraft.then(() => Promise.all([
+      fetch(`${apiBaseUrl}/api/v1/wardrobe/catalog/edit`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setEditCatalog({ categories: data.categories || [], styles: data.styles || [] }); })
+        .catch(() => {}),
+      fetch(`${apiBaseUrl}/api/v1/wardrobe/catalog`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setCatalog({ occasions: (data.occasions || []).map(o => o.name), weathers: (data.weathers || []).map(w => w.name) }); })
+        .catch(() => {}),
+      fetch(`${apiBaseUrl}/api/v1/wardrobe/list?userId=${userId}`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+        .then(r => r.ok ? r.json() : null)
+        .then(items => {
+          if (items) setWardrobeItems(items.map(item => ({ ...item, imageUrl: item.imageUrl?.replace('http://dressme-back:8080', backServiceUrl) })));
+        })
+        .catch(() => {}),
+    ]));
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -40,7 +81,11 @@ function App() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) return;
-      setWardrobeItems(await res.json());
+      const items = await res.json();
+      setWardrobeItems(items.map(item => ({
+        ...item,
+        imageUrl: item.imageUrl?.replace('http://dressme-back:8080', backServiceUrl),
+      })));
     } catch (err) {
       console.error('App: error cargando guardarropa', err);
     }
@@ -63,6 +108,20 @@ function App() {
     }
   }, []);
 
+  const loadEditCatalog = useCallback(async (token) => {
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/v1/wardrobe/catalog/edit`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setEditCatalog({ categories: data.categories || [], styles: data.styles || [] });
+    } catch (err) {
+      console.error('App: error cargando catálogo de edición', err);
+    }
+  }, []);
+
   // ── Auth ─────────────────────────────────────────────────────────────────────
 
   const handleLoginSuccess = (userData) => {
@@ -71,6 +130,7 @@ function App() {
     setUser(userData);
     loadWardrobe(userData.id, userData.token);
     loadCatalog(userData.token);
+    loadEditCatalog(userData.token);
     setCurrentView(!userData.isCalibrated ? 'onboarding' : 'home');
   };
 
@@ -133,6 +193,7 @@ function App() {
         onUploadComplete={() => setCurrentView('home')}
         isFirstTime={isFirstTimeUpload}
         onPrendaGuardada={handlePrendaGuardada}
+        editCatalog={editCatalog}
       />
     );
   }
@@ -148,7 +209,11 @@ function App() {
         onGoToOutfits={() => setCurrentView('outfits')}
         onGoToFavorites={() => setCurrentView('favorites')}
         onGoToConfig={() => setCurrentView('config')}
-        wardrobeItems={wardrobeItems}
+        prendas={wardrobeItems.map(item => ({
+          id:    item.id,
+          image: item.imageUrl,
+          name:  item.categoryName ?? 'Prenda',
+        }))}
         favoritosData={favoritosData}
       />
     );
