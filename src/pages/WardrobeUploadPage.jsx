@@ -34,10 +34,13 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
   // ── Preview URL ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!selectedFile) { setPreviewUrl(null); return; }
+    if (!selectedFile) return;
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+    return () => {
+      setPreviewUrl(null);
+      URL.revokeObjectURL(url);
+    };
   }, [selectedFile]);
 
   // ── Click outside profile menu ────────────────────────────────────────────────
@@ -101,7 +104,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
   const pollDetail = useCallback((clothingId, deadline) => {
     const token = localStorage.getItem('authToken');
 
-    pollTimerRef.current = setTimeout(async () => {
+    const checkDetail = async () => {
       try {
         const res  = await fetch(`${apiBaseUrl}/api/v1/wardrobe/${clothingId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -125,18 +128,22 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
             styleId:     detail.styleId,
           });
         } else if (Date.now() < deadline) {
-          pollDetail(clothingId, deadline);
+          pollTimerRef.current = setTimeout(checkDetail, POLL_INTERVAL_MS);
         } else {
           // Timeout — mostrar lo que haya aunque isProcessed=false
           setIsAnalyzing(false);
+          const catEntry = editCatalogRef.current.categories.find(c => c.id === detail.categoryId);
           setAiResult({
-            id:       detail.id,
-            imageUrl: detail.imageUrl,
-            category: detail.categoryName ?? '—',
-            style:    '—',
-            color:    '—',
-            ocasion:  '—',
-            clima:    '—',
+            id:          detail.id,
+            imageUrl:    detail.imageUrl,
+            category:    detail.categoryName ?? '—',
+            style:       detail.styleName    ?? '—',
+            color:       detail.colorName    ?? '—',
+            ocasion:     detail.occasionName ?? '—',
+            clima:       detail.weatherName  ?? '—',
+            categoryId:  detail.categoryId,
+            typeId:      catEntry?.parentId ?? detail.categoryId,
+            styleId:     detail.styleId,
           });
           setUploadError('El análisis tardó más de lo esperado. Puedes editar la prenda manualmente.');
         }
@@ -144,7 +151,9 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
         setIsAnalyzing(false);
         setUploadError('Error consultando el resultado del análisis.');
       }
-    }, POLL_INTERVAL_MS);
+    };
+
+    pollTimerRef.current = setTimeout(checkDetail, POLL_INTERVAL_MS);
   }, []);
 
   // ── Upload ────────────────────────────────────────────────────────────────────
