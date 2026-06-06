@@ -248,8 +248,8 @@ const OutfitsPage = ({
             >
               {user?.profilePicture ? (
                 <img
-                  src={user.profilePicture}
-                  alt={user.displayName}
+                  src={user?.profilePicture}
+                  alt={user?.displayName ?? 'Usuario'}
                   className="w-12 h-12 rounded-full object-cover border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1"
                 />
               ) : (
@@ -294,7 +294,7 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {ocasiones.map((o) => <option key={o} value={o}>{o}</option>)}
+                    {(Array.isArray(ocasiones) ? ocasiones : []).map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
@@ -310,7 +310,7 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {climas.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {(Array.isArray(climas) ? climas : []).map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
@@ -326,7 +326,7 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {dressCodes.map((d) => <option key={d} value={d}>{d}</option>)}
+                    {(Array.isArray(dressCodes) ? dressCodes : []).map((d) => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
