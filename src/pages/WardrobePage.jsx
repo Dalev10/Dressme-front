@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Home, Shirt, Zap, Heart, Settings, HelpCircle,
   ChevronDown, LogOut, Plus, ShoppingBag,
-  Tag, Palette, Sparkles, Layers, Pencil, Trash2, X, Lightbulb, Loader2,
+  Tag, Palette, Sparkles, Layers, Pencil, Trash2, X, Lightbulb, Loader2, Cloud,
 } from 'lucide-react';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -368,7 +368,7 @@ const WardrobePage = ({
                     {/* Categoría */}
                     <div className="flex items-center gap-3">
                       <Tag className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-24 flex-shrink-0">Categoría</span>
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Categoría</span>
                       {editMode ? (
                         <div className="relative flex-1">
                           <select
@@ -377,22 +377,34 @@ const WardrobePage = ({
                               const cat = editCatalog.categories.find(c => c.id === e.target.value);
                               setEditFields(p => ({ ...p, categoryId: e.target.value, categoryName: cat?.name ?? '' }));
                             }}
-                            className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none cursor-pointer"
+                            className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
                           >
                             <option value="">— Selecciona —</option>
-                            {parentCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {parentCategories.map(parent => (
+                              <optgroup key={parent.id} label={parent.name}>
+                                {editCatalog.categories.filter(c => c.parentId === parent.id).map(cat => (
+                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                              </optgroup>
+                            ))}
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
                         </div>
                       ) : (
-                        <span className="text-sm text-brand-dark font-medium">{selectedDetail.categoryName || '—'}</span>
+                        <span className="text-sm text-brand-dark font-medium">
+                          {(() => {
+                            const child = editCatalog.categories.find(c => c.id === selectedDetail.categoryId);
+                            const parent = child ? editCatalog.categories.find(c => c.id === child.parentId) : null;
+                            return parent ? `${parent.name} > ${child.name}` : (selectedDetail.categoryName || '—');
+                          })()}
+                        </span>
                       )}
                     </div>
 
                     {/* Estilo */}
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-24 flex-shrink-0">Estilo</span>
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Estilo</span>
                       {editMode ? (
                         <div className="relative flex-1">
                           <select
@@ -401,10 +413,12 @@ const WardrobePage = ({
                               const style = editCatalog.styles.find(s => s.id === e.target.value);
                               setEditFields(p => ({ ...p, styleId: e.target.value, styleName: style?.name ?? '' }));
                             }}
-                            className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none cursor-pointer"
+                            className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
                           >
                             <option value="">— Selecciona —</option>
-                            {editCatalog.styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {editCatalog.styles.map(s => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
                         </div>
@@ -413,10 +427,10 @@ const WardrobePage = ({
                       )}
                     </div>
 
-                    {/* Color */}
+                    {/* Color principal */}
                     <div className="flex items-center gap-3">
                       <Palette className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-24 flex-shrink-0">Color</span>
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Color principal</span>
                       <div className="flex items-center gap-2">
                         {selectedDetail.colorHex && (
                           <span className="w-4 h-4 rounded-full border border-brand-sand/50 flex-shrink-0" style={{ backgroundColor: selectedDetail.colorHex }} />
@@ -428,8 +442,15 @@ const WardrobePage = ({
                     {/* Ocasión */}
                     <div className="flex items-center gap-3">
                       <Layers className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-24 flex-shrink-0">Ocasión</span>
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Ocasión</span>
                       <span className="text-sm text-brand-dark font-medium">{selectedDetail.occasionName || '—'}</span>
+                    </div>
+
+                    {/* Clima */}
+                    <div className="flex items-center gap-3">
+                      <Cloud className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Clima</span>
+                      <span className="text-sm text-brand-dark font-medium">{selectedDetail.weatherName || '—'}</span>
                     </div>
                   </div>
 

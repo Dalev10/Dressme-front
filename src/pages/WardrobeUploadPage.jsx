@@ -294,7 +294,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
           </div>
           {isFirstTime && (
             <div className="text-center text-sm md:text-base text-brand-dark/70 font-sans font-medium">
-              <span className="text-brand-bronze">Paso 3 de 3:</span> Tu Armario Virtual
+              <span className="text-brand-bronze">Paso 2 de 2:</span> Tu Armario Virtual
             </div>
           )}
           <div className="relative" ref={profileMenuRef}>
@@ -508,7 +508,13 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
                         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
                       </div>
                     ) : (
-                      <span className="text-sm text-brand-dark font-medium">{aiResult.category}</span>
+                      <span className="text-sm text-brand-dark font-medium">
+                        {(() => {
+                          const child = editCatalog.categories.find(c => c.id === aiResult.categoryId);
+                          const parent = child ? editCatalog.categories.find(c => c.id === child.parentId) : null;
+                          return parent ? `${parent.name} > ${child.name}` : aiResult.category;
+                        })()}
+                      </span>
                     )}
                   </div>
 
@@ -595,7 +601,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
                 onClick={() => onUploadComplete && onUploadComplete()}
                 className="btn-shimmer relative inline-flex items-center justify-center w-full rounded-full bg-brand-charcoal px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:opacity-90 overflow-hidden"
               >
-                <span className="relative z-10">Ir al inicio</span>
+                <span className="relative z-10">Ir al armario</span>
               </button>
             </div>
           </div>
