@@ -127,7 +127,7 @@ const OnboardingPage = ({ user, onLogout, onCalibrationCompleted }) => {
   };
 
   const minSelectionsReached = selections.size >= 5;
-  const progressText = `Paso 1 de 3: Define tu estilo (${selections.size} selecciones)`;
+  const progressText = `Paso 1 de 2: Define tu estilo (${selections.size} selecciones)`;
 
   return (
     <div className="relative min-h-screen bg-[#F4F0EA] selection:bg-brand-bronze/20 selection:text-brand-dark overflow-hidden">
