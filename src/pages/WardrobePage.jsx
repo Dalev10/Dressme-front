@@ -235,7 +235,7 @@ const WardrobePage = ({
           <div className="relative" ref={profileMenuRef}>
             <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               {user?.profilePicture ? (
-                <img src={user.profilePicture} alt={user.displayName} className="w-12 h-12 rounded-full object-cover border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1" />
+                <img src={user?.profilePicture} alt={user?.displayName ?? 'Usuario'} className="w-12 h-12 rounded-full object-cover border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1" />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-brand-charcoal text-white flex items-center justify-center text-sm font-semibold ring-2 ring-gray-400/80 ring-offset-1">
                   {getInitials(user?.displayName)}
@@ -268,7 +268,7 @@ const WardrobePage = ({
                 className="appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2 pr-8 text-xs text-brand-dark outline-none transition-all hover:border-brand-dark/30"
               >
                 <option value="">— Todas —</option>
-                {[...new Set(prendas.map(p => p.categoryName).filter(Boolean))].map(cat => (
+                {[...new Set((Array.isArray(prendas) ? prendas : []).map(p => p.categoryName).filter(Boolean))].map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -284,7 +284,7 @@ const WardrobePage = ({
           {/* Grid */}
           {prendas.length > 0 ? (
             <div className="grid grid-cols-4 gap-3">
-              {prendasFiltradas.map((prenda) => (
+              {(Array.isArray(prendasFiltradas) ? prendasFiltradas : []).map((prenda) => (
                 <button
                   key={prenda.id}
                   onClick={() => openModal(prenda)}
@@ -380,9 +380,9 @@ const WardrobePage = ({
                             className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
                           >
                             <option value="">— Selecciona —</option>
-                            {parentCategories.map(parent => (
+                            {(Array.isArray(parentCategories) ? parentCategories : []).map(parent => (
                               <optgroup key={parent.id} label={parent.name}>
-                                {editCatalog.categories.filter(c => c.parentId === parent.id).map(cat => (
+                                {(Array.isArray(editCatalog.categories) ? editCatalog.categories : []).filter(c => c.parentId === parent.id).map(cat => (
                                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
                               </optgroup>
@@ -416,7 +416,7 @@ const WardrobePage = ({
                             className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
                           >
                             <option value="">— Selecciona —</option>
-                            {editCatalog.styles.map(s => (
+                            {(Array.isArray(editCatalog.styles) ? editCatalog.styles : []).map(s => (
                               <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                           </select>
