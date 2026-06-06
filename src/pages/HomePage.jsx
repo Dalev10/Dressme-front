@@ -212,12 +212,20 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
               <h2 className="text-2xl font-serif font-bold text-brand-dark">
                 Mi Armario
               </h2>
-              <button
-                onClick={() => onGoToWardrobePage && onGoToWardrobePage()}
-                className="text-sm font-medium text-brand-dark hover:text-brand-dark/70 transition-colors"
-              >
-                Ver Todo →
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => onGoToWardrobe && onGoToWardrobe()}
+                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-brand-charcoal px-5 py-2 text-sm font-medium text-white transition-all duration-300 hover:opacity-90"
+                >
+                  <Plus className="w-4 h-4" /> Subir prenda
+                </button>
+                <button
+                  onClick={() => onGoToWardrobePage && onGoToWardrobePage()}
+                  className="text-sm font-medium text-brand-dark hover:text-brand-dark/70 transition-colors"
+                >
+                  Ver Todo →
+                </button>
+              </div>
             </div>
 
             {prendas.length > 0 ? (
