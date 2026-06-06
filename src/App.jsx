@@ -69,7 +69,7 @@ function App() {
         .catch(() => {}),
       fetch(`${apiBaseUrl}/api/v1/wardrobe/catalog`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setCatalog({ occasions: (data.occasions || []).map(o => o.name), weathers: (data.weathers || []).map(w => w.name) }); })
+        .then(data => { if (data) setCatalog({ occasions: data.occasions || [], weathers: data.weathers || [] }); })
         .catch(() => {}),
       fetch(`${apiBaseUrl}/api/v1/wardrobe/list?userId=${userId}`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
         .then(r => r.ok ? r.json() : null)
@@ -110,8 +110,8 @@ function App() {
       if (!res.ok) return;
       const data = await res.json();
       setCatalog({
-        occasions: (data.occasions || []).map(o => o.name),
-        weathers:  (data.weathers  || []).map(w => w.name),
+        occasions: data.occasions || [],
+        weathers:  data.weathers  || [],
       });
     } catch (err) {
       console.error('App: error cargando catálogo', err);
