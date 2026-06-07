@@ -381,11 +381,7 @@ const WardrobePage = ({
                           >
                             <option value="">— Selecciona —</option>
                             {(Array.isArray(parentCategories) ? parentCategories : []).map(parent => (
-                              <optgroup key={parent.id} label={parent.name}>
-                                {(Array.isArray(editCatalog.categories) ? editCatalog.categories : []).filter(c => c.parentId === parent.id).map(cat => (
-                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                              </optgroup>
+                              <option key={parent.id} value={parent.id}>{parent.name}</option>
                             ))}
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
@@ -393,9 +389,8 @@ const WardrobePage = ({
                       ) : (
                         <span className="text-sm text-brand-dark font-medium">
                           {(() => {
-                            const child = editCatalog.categories.find(c => c.id === selectedDetail.categoryId);
-                            const parent = child ? editCatalog.categories.find(c => c.id === child.parentId) : null;
-                            return parent ? `${parent.name} > ${child.name}` : (selectedDetail.categoryName || '—');
+                            const cat = editCatalog.categories.find(c => c.id === selectedDetail.categoryId);
+                            return cat?.name || selectedDetail.categoryName || '—';
                           })()}
                         </span>
                       )}

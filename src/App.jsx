@@ -41,7 +41,42 @@ function App() {
   const [wardrobeItems, setWardrobeItems]         = useState([]);
   const [catalog, setCatalog]                     = useState({ occasions: [], weathers: [] });
   const [editCatalog, setEditCatalog]             = useState({ categories: [], styles: [] });
-  const [favoritosData, setFavoritosData]         = useState([]);
+  const [favoritosData, setFavoritosData]         = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dressme_favoritos') || '[]'); }
+    catch { return []; }
+  });
+
+  const [outfitHistory, setOutfitHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dressme_outfit_history') || '[]'); }
+    catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dressme_favoritos', JSON.stringify(favoritosData));
+  }, [favoritosData]);
+
+  useEffect(() => {
+    localStorage.setItem('dressme_outfit_history', JSON.stringify(outfitHistory));
+  }, [outfitHistory]);
+
+  const handleOutfitsGenerated = useCallback((newOutfits) => {
+    setOutfitHistory((prev) => {
+      const existingIds = new Set(prev.map((o) => o.id));
+      const newOnes = newOutfits.filter((o) => !existingIds.has(o.id));
+      return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
+    });
+  }, []);
+
+  const handleRemoveFromHistory = useCallback((id) => {
+    setOutfitHistory((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
+  const handleLikeFromHistory = useCallback((outfit) => {
+    setFavoritosData((prev) => {
+      if (prev.some((o) => o.id === outfit.id)) return prev;
+      return [...prev, outfit];
+    });
+  }, []);
 
   // ── Carga inicial para sesiones ya activas (refresh de página) ───────────────
 
@@ -148,9 +183,16 @@ function App() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('dressme_user');
     localStorage.removeItem('dressme_current_view');
+    localStorage.removeItem('dressme_favoritos');
+    localStorage.removeItem('dressme_outfits');
+    localStorage.removeItem('dressme_outfit_history');
+    localStorage.removeItem('dressme_outfit_filters');
+    localStorage.removeItem('dressme_outfit_generated');
     setUser(null);
     setWardrobeItems([]);
     setCatalog({ occasions: [], weathers: [] });
+    setFavoritosData([]);
+    setOutfitHistory([]);
     setCurrentView('landing');
   };
 
@@ -263,6 +305,8 @@ function App() {
         climas={catalog.weathers}
         dressCodes={[]}
         hasPrendas={wardrobeItems.length > 0}
+        onOutfitsGenerated={handleOutfitsGenerated}
+        onRemoveFromHistory={handleRemoveFromHistory}
         onOutfitLiked={(outfit, removeId) => {
           if (removeId) {
             setFavoritosData(prev => prev.filter(o => o.id !== removeId));
@@ -289,7 +333,10 @@ function App() {
         climas={catalog.weathers}
         dressCodes={[]}
         favoritosData={favoritosData}
+        outfitHistory={outfitHistory}
         onRemoveFavorite={(id) => setFavoritosData(prev => prev.filter(o => o.id !== id))}
+        onRemoveFromHistory={handleRemoveFromHistory}
+        onLikeFromHistory={handleLikeFromHistory}
       />
     );
   }

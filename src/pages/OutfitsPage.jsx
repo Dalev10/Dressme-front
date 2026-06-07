@@ -34,14 +34,25 @@ const OutfitsPage = ({
   dressCodes = [],
   hasPrendas = false,
   onOutfitLiked = () => {},
+  onOutfitsGenerated = () => {},
+  onRemoveFromHistory = () => {},
 }) => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [showHelpPanel,   setShowHelpPanel]   = useState(false);
-  const [filters, setFilters] = useState({ ocasion: '', clima: '', dressCode: '' });
-  const [generated, setGenerated] = useState(false);
+  const [filters, setFilters] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dressme_outfit_filters') || 'null') || { ocasion: '', clima: '', dressCode: '' }; }
+    catch { return { ocasion: '', clima: '', dressCode: '' }; }
+  });
+  const [generated, setGenerated] = useState(() => {
+    try { return localStorage.getItem('dressme_outfit_generated') === 'true'; }
+    catch { return false; }
+  });
   const [loading, setLoading] = useState(false);
   const [generateError, setGenerateError] = useState(null);
-  const [outfits, setOutfits] = useState([]);
+  const [outfits, setOutfits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dressme_outfits') || '[]'); }
+    catch { return []; }
+  });
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [ghostIndex,    setGhostIndex]    = useState(0);
   const [recomIndex,    setRecomIndex]    = useState(0);
@@ -60,6 +71,10 @@ const OutfitsPage = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => { localStorage.setItem('dressme_outfit_filters', JSON.stringify(filters)); }, [filters]);
+  useEffect(() => { localStorage.setItem('dressme_outfits', JSON.stringify(outfits)); }, [outfits]);
+  useEffect(() => { localStorage.setItem('dressme_outfit_generated', String(generated)); }, [generated]);
 
   const getInitials = (name) => {
     if (!name) return 'DM';
@@ -86,7 +101,7 @@ const OutfitsPage = ({
         }
       );
       if (res.status === 422) {
-        setGenerateError('No tienes suficientes prendas para generar un outfit');
+        setGenerateError('No tienes suficientes prendas para generar un outfit con esa combinación');
         return;
       }
       if (!res.ok) {
@@ -94,7 +109,14 @@ const OutfitsPage = ({
         return;
       }
       const data = await res.json();
-      setOutfits(Array.isArray(data.outfits) ? data.outfits : []);
+      const outfitList = Array.isArray(data.outfits) ? data.outfits : [];
+      setOutfits(outfitList);
+      if (outfitList.length > 0) onOutfitsGenerated(outfitList);
+
+      if (outfitList.length === 0) {
+        setGenerateError('No tienes suficientes prendas para generar un outfit con esa combinación');
+        return;
+      }
       setGenerated(true);
     } catch {
       setGenerateError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -121,7 +143,12 @@ const OutfitsPage = ({
       newLiked.add(id);
       newDisliked.delete(id);
       const outfit = outfits.find((o) => o.id === id);
-      if (outfit) onOutfitLiked(outfit);
+      if (outfit) {
+        const ocasionName = ocasiones.find(o => o.id === filters.ocasion)?.name || '';
+        const climaName = climas.find(c => c.id === filters.clima)?.name || '';
+        const dressCodeName = dressCodes.find(d => d.id === filters.dressCode)?.name || '';
+        onOutfitLiked({ ...outfit, name: 'Outfit', ocasion: ocasionName, clima: climaName, dressCode: dressCodeName });
+      }
     }
     setLikedOutfits(newLiked);
     setDislikedOutfits(newDisliked);
@@ -136,6 +163,7 @@ const OutfitsPage = ({
       newDisliked.add(id);
       if (newLiked.has(id)) onOutfitLiked(null, id);
       newLiked.delete(id);
+      onRemoveFromHistory(id);
     }
     setDislikedOutfits(newDisliked);
     setLikedOutfits(newLiked);
@@ -267,9 +295,9 @@ const OutfitsPage = ({
           {/* FILTROS */}
           <section className="rounded-3xl bg-gradient-to-br from-[#F3EFE9] to-[#F8F5F1] p-8 border-4 border-gray-300/50">
             <p className="text-2xl font-serif font-bold text-brand-dark mb-4">Generar nuevo outfit</p>
-            <div className="flex flex-wrap items-end gap-4">
+            <div className="flex items-end justify-center gap-6">
               {/* Ocasión */}
-              <div className="flex-1 min-w-[140px]">
+              <div className="w-52">
                 <label className="text-xs font-semibold text-brand-dark mb-2 block">Ocasión</label>
                 <div className="relative">
                   <select
@@ -285,7 +313,7 @@ const OutfitsPage = ({
               </div>
 
               {/* Clima */}
-              <div className="flex-1 min-w-[140px]">
+              <div className="w-52">
                 <label className="text-xs font-semibold text-brand-dark mb-2 block">Clima</label>
                 <div className="relative">
                   <select
@@ -299,23 +327,6 @@ const OutfitsPage = ({
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
               </div>
-
-              {/* Dress Code */}
-              <div className="flex-1 min-w-[140px]">
-                <label className="text-xs font-semibold text-brand-dark mb-2 block">Dress Code</label>
-                <div className="relative">
-                  <select
-                    value={filters.dressCode}
-                    onChange={(e) => setFilters((p) => ({ ...p, dressCode: e.target.value }))}
-                    className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
-                  >
-                    <option value="">Seleccionar...</option>
-                    {(Array.isArray(dressCodes) ? dressCodes : []).map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
-                </div>
-              </div>
-
             </div>
 
             {/* Error de generación */}
@@ -510,53 +521,6 @@ const OutfitsPage = ({
             )}
           </section>
 
-          {/* RECOMENDADOS PARA TI */}
-          <section className="mt-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-serif font-bold text-brand-dark">Recomendados para Ti</h2>
-              <p className="text-sm text-brand-dark/60 mt-1">Basado en tu estilo y preferencias</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setRecomIndex((p) => Math.max(0, p - 1))}
-                disabled={recomIndex === 0}
-                className="flex-shrink-0 w-10 h-10 rounded-full border border-brand-sand bg-white flex items-center justify-center text-brand-dark hover:bg-brand-sand/40 transition-all duration-200 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="grid grid-cols-3 gap-6 flex-1">
-                {[Sparkles, Shirt, Heart, Zap, ThumbsUp, ThumbsDown].slice(recomIndex, recomIndex + VISIBLE).map((Icon, i) => (
-                  <div
-                    key={recomIndex + i}
-                    className="rounded-3xl overflow-hidden bg-brand-sand/60 flex flex-col items-center justify-center gap-3"
-                    style={{ height: '380px', opacity: 0.45, filter: 'blur(0.6px)' }}
-                  >
-                    <Icon className="w-12 h-12 text-brand-dark/40" />
-                    <p className="text-sm text-brand-dark/50 font-medium text-center px-8">
-                      Genera outfits para ver recomendaciones
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => setRecomIndex((p) => Math.min(6 - VISIBLE, p + 1))}
-                disabled={recomIndex >= 6 - VISIBLE}
-                className="flex-shrink-0 w-10 h-10 rounded-full border border-brand-sand bg-white flex items-center justify-center text-brand-dark hover:bg-brand-sand/40 transition-all duration-200 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            {!hasPrendas && (
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => onGoToWardrobe && onGoToWardrobe()}
-                  className="btn-shimmer relative inline-flex items-center gap-2 rounded-full bg-brand-charcoal px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:opacity-90 overflow-hidden"
-                >
-                  <span className="relative z-10">Agregar mis primeras prendas</span>
-                </button>
-              </div>
-            )}
-          </section>
 
           <div className="h-8" />
         </div>

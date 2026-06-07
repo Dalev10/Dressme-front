@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Home,
   Shirt,
@@ -11,15 +11,11 @@ import {
   MapPin,
   Cloud,
   Tag,
-  Sparkles,
-  Wand2,
-  ShoppingBag,
   X,
   Lightbulb,
+  Wand2,
 } from 'lucide-react';
-
-// Icon pool for ghost cards
-const GHOST_ICONS = [Sparkles, Wand2, ShoppingBag, Shirt, Heart];
+import OutfitHistoryCard from '../components/OutfitHistoryCard';
 
 const FavoritesPage = ({
   user,
@@ -34,7 +30,10 @@ const FavoritesPage = ({
   climas      = [],
   dressCodes  = [],
   favoritosData = [],
+  outfitHistory = [],
   onRemoveFavorite = () => {},
+  onRemoveFromHistory = () => {},
+  onLikeFromHistory = () => {},
 }) => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [showHelpPanel,   setShowHelpPanel]   = useState(false);
@@ -58,8 +57,11 @@ const FavoritesPage = ({
     return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   };
 
+  const favoritosIds = useMemo(() => new Set(favoritosData.map((o) => o.id)), [favoritosData]);
+
   const handleRemoveFavorite = (id) => {
     onRemoveFavorite(id);
+    onRemoveFromHistory(id);
   };
 
   const handleApplyFilters = () => setAppliedFilters({ ...filters });
@@ -203,10 +205,10 @@ const FavoritesPage = ({
             </div>
 
             {/* ── FILTROS — siempre visibles ── */}
-            <div className="mb-8 space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+            <div className="mb-8">
+              <div className="flex items-end justify-center gap-6 mb-4">
                 {/* Ocasión */}
-                <div>
+                <div className="w-52">
                   <label className="text-xs font-semibold text-brand-dark mb-2 block">Ocasión</label>
                   <div className="relative">
                     <select
@@ -215,14 +217,14 @@ const FavoritesPage = ({
                       className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-3 py-2 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                     >
                       <option value="">— Todos —</option>
-                      {ocasiones.map((o) => <option key={o} value={o}>{o}</option>)}
+                      {Array.isArray(ocasiones) && ocasiones.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                   </div>
                 </div>
 
                 {/* Clima */}
-                <div>
+                <div className="w-52">
                   <label className="text-xs font-semibold text-brand-dark mb-2 block">Clima</label>
                   <div className="relative">
                     <select
@@ -231,30 +233,14 @@ const FavoritesPage = ({
                       className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-3 py-2 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                     >
                       <option value="">— Todos —</option>
-                      {climas.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
-                  </div>
-                </div>
-
-                {/* Dress Code */}
-                <div>
-                  <label className="text-xs font-semibold text-brand-dark mb-2 block">Dress Code</label>
-                  <div className="relative">
-                    <select
-                      value={filters.dressCode}
-                      onChange={(e) => setFilters((p) => ({ ...p, dressCode: e.target.value }))}
-                      className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-3 py-2 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
-                    >
-                      <option value="">— Todos —</option>
-                      {dressCodes.map((d) => <option key={d} value={d}>{d}</option>)}
+                      {Array.isArray(climas) && climas.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-4">
+              <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={handleClearFilters}
                   className="text-xs font-medium text-brand-dark/60 hover:text-brand-dark transition-colors hover:underline"
@@ -312,17 +298,32 @@ const FavoritesPage = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {favoritosFiltrados.map((outfit, i) => {
-                      const GhostIcon = GHOST_ICONS[i % GHOST_ICONS.length];
+                    {favoritosFiltrados.map((outfit) => {
                       return (
                         <div
                           key={outfit.id}
                           className="group relative rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1 flex flex-col border-4 border-gray-300/60"
                           style={{ height: '380px' }}
                         >
-                          {/* Ghost image area */}
-                          <div className="relative flex-1 bg-brand-sand/55 flex items-center justify-center">
-                            <GhostIcon className="w-16 h-16 text-brand-dark/20" />
+                          {/* Imágenes del outfit */}
+                          <div className="relative flex-1 overflow-hidden">
+                            {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
+                              <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={url}
+                                    alt={`Prenda ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="w-full h-full bg-brand-sand/30 flex items-center justify-center">
+                                <p className="text-xs text-brand-dark/40">No se pudieron cargar las imágenes</p>
+                              </div>
+                            )}
                             {/* Remove favourite */}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(outfit.id); }}
@@ -335,7 +336,9 @@ const FavoritesPage = ({
 
                           {/* Info */}
                           <div className="p-4 bg-white/50 backdrop-blur-sm">
-                            <p className="text-sm font-semibold text-brand-dark mb-2">{outfit.name}</p>
+                            <p className="text-sm font-semibold text-brand-dark mb-2">
+                              {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
+                            </p>
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2 text-xs text-brand-dark/60">
                                 <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
@@ -345,10 +348,12 @@ const FavoritesPage = ({
                                 <Cloud className="w-3.5 h-3.5 flex-shrink-0" />
                                 <span>{outfit.clima}</span>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-brand-dark/60">
-                                <Tag className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>{outfit.dressCode}</span>
-                              </div>
+                              {outfit.dressCode && (
+                                <div className="flex items-center gap-2 text-xs text-brand-dark/60">
+                                  <Tag className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>{outfit.dressCode}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -357,6 +362,42 @@ const FavoritesPage = ({
                   </div>
                 )}
               </>
+            )}
+          </section>
+
+          {/* ── SECCIÓN 2: OUTFITS PARA TI ──────────────────── */}
+          <section>
+            <div className="mb-6">
+              <h2 className="text-2xl font-serif font-bold text-brand-dark">Outfits para Ti</h2>
+              <p className="text-sm text-brand-dark/60 mt-1">Todos los outfits que la IA ha generado para ti</p>
+            </div>
+
+            {outfitHistory.length === 0 ? (
+              <div className="rounded-3xl glass-effect p-12 text-center" style={{ border: '4px solid rgba(209,213,219,0.6)', boxShadow: '0 4px 16px rgba(192,192,192,0.25)' }}>
+                <div className="flex items-center justify-center mb-4">
+                  <Wand2 className="w-12 h-12 text-brand-dark/40" />
+                </div>
+                <h3 className="text-xl font-serif font-bold text-brand-dark mb-2">Aún no hay outfits generados</h3>
+                <p className="text-sm text-brand-dark/60 mb-6">Genera outfits con IA y aparecerán aquí</p>
+                <button
+                  onClick={() => onGoToOutfits && onGoToOutfits()}
+                  className="btn-shimmer px-6 py-3 bg-brand-charcoal text-white rounded-full font-medium"
+                >
+                  Generar Outfits
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[...outfitHistory].reverse().map((outfit) => (
+                  <OutfitHistoryCard
+                    key={outfit.id}
+                    outfit={outfit}
+                    isLiked={favoritosIds.has(outfit.id)}
+                    onLike={(o) => { onLikeFromHistory(o); onRemoveFromHistory(o.id); }}
+                    onDislike={(id) => onRemoveFromHistory(id)}
+                  />
+                ))}
+              </div>
             )}
           </section>
 

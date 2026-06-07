@@ -17,11 +17,23 @@ import {
   Lightbulb,
 } from 'lucide-react';
 
-const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWardrobePage, onGoToOutfits, onGoToFavorites, onGoToConfig, prendas = [], favoritosData = [], outfits = [] }) => {
+const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWardrobePage, onGoToOutfits, onGoToFavorites, onGoToConfig, prendas = [], favoritosData = [] }) => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [showHelpPanel,   setShowHelpPanel]   = useState(false);
-  const [favoriteOutfits, setFavoriteOutfits] = useState(new Set());
   const profileMenuRef = useRef(null);
+
+  const [outfitHistory, setOutfitHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dressme_outfit_history') || '[]'); }
+    catch { return []; }
+  });
+
+  // Re-leer historial cada vez que el componente monta (usuario navega a home)
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('dressme_outfit_history') || '[]');
+      setOutfitHistory(stored);
+    } catch { /* ignorar */ }
+  }, []);
 
   // Validar autenticación al cargar
   useEffect(() => {
@@ -328,39 +340,37 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
               </button>
             </div>
 
-            {outfits.length > 0 ? (
+            {outfitHistory.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(Array.isArray(outfits) ? outfits : []).map((outfit) => (
+                {outfitHistory.slice(-4).reverse().map((outfit) => (
                   <div
                     key={outfit.id}
+                    onClick={() => onGoToOutfits && onGoToOutfits()}
                     className="group cursor-pointer relative overflow-hidden rounded-2xl border-4 border-gray-300/60 shadow-[0_4px_16px_rgba(192,192,192,0.25)]"
                   >
                     <div className="relative h-64 bg-brand-sand/30">
-                      <img
-                        src={outfit.image}
-                        alt={outfit.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {/* Heart Button */}
-                      <button
-                        onClick={() => toggleFavorite(outfit.id)}
-                        className="absolute top-3 right-3 z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors"
-                      >
-                        <Heart
-                          className={`w-5 h-5 transition-all ${
-                            favoriteOutfits.has(outfit.id)
-                              ? 'fill-brand-charcoal text-brand-charcoal'
-                              : 'text-brand-charcoal'
-                          }`}
-                        />
-                      </button>
+                      {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
+                        <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
+                            <img
+                              key={idx}
+                              src={url}
+                              alt={`Prenda ${idx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <p className="text-xs text-brand-dark/40">Sin imagen</p>
+                        </div>
+                      )}
                     </div>
                     <div className="p-4 bg-white/50 backdrop-blur-sm">
-                      <p className="text-sm font-semibold text-brand-dark">
-                        {outfit.name}
-                      </p>
+                      <p className="text-sm font-semibold text-brand-dark">Outfit</p>
                       <p className="text-xs text-brand-dark/60">
-                        {outfit.garments} prendas
+                        {Array.isArray(outfit.clothingImageUrls) ? outfit.clothingImageUrls.length : 0} prendas
                       </p>
                     </div>
                   </div>
@@ -399,22 +409,41 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
                 {(Array.isArray(favoritosData) ? favoritosData : []).map((favorite) => (
                   <div
                     key={favorite.id}
-                    className="group cursor-pointer relative overflow-hidden rounded-2xl border-4 border-gray-300/60 shadow-[0_4px_16px_rgba(192,192,192,0.25)]"
+                    className="group relative overflow-hidden rounded-2xl border-4 border-gray-300/60 shadow-[0_4px_16px_rgba(192,192,192,0.25)]"
                   >
-                    <div className="relative h-80 bg-brand-sand/30">
-                      <img
-                        src={favorite.image}
-                        alt={favorite.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {/* Heart Button - Always Filled */}
-                      <button className="absolute top-3 right-3 z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors">
+                    <div className="relative flex-1 overflow-hidden" style={{ height: '280px' }}>
+                      {Array.isArray(favorite.clothingImageUrls) && favorite.clothingImageUrls.length > 0 ? (
+                        <div className={`grid h-full ${favorite.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {favorite.clothingImageUrls.slice(0, 4).map((url, idx) => (
+                            <img
+                              key={idx}
+                              src={url}
+                              alt={`Prenda ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="w-full h-full bg-brand-sand/30 flex items-center justify-center">
+                          <p className="text-xs text-brand-dark/40">No se pudieron cargar las imágenes</p>
+                        </div>
+                      )}
+                      {/* Heart Button - Remove from favorites */}
+                      <button
+                        onClick={() => onGoToFavorites && onGoToFavorites()}
+                        className="absolute top-3 right-3 z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors"
+                        aria-label="Ver favoritos"
+                      >
                         <Heart className="w-5 h-5 fill-brand-charcoal text-brand-charcoal" />
                       </button>
                     </div>
                     <div className="p-4 bg-white/50 backdrop-blur-sm">
                       <p className="text-sm font-semibold text-brand-dark">
-                        {favorite.name}
+                        {Array.isArray(favorite.clothingImageUrls) ? `${favorite.clothingImageUrls.length} prendas` : 'Outfit'}
+                      </p>
+                      <p className="text-xs text-brand-dark/60">
+                        {favorite.ocasion} • {favorite.clima}
                       </p>
                     </div>
                   </div>
@@ -437,10 +466,10 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
             )}
           </section>
 
-          {/* Sección: Descubre Funciones */}
+          {/* Sección: Nuestras Funciones */}
           <section>
             <h2 className="text-2xl font-serif font-bold text-brand-dark mb-6">
-              Descubre Funciones
+              Nuestras Funciones
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
