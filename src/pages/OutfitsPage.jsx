@@ -148,6 +148,7 @@ const OutfitsPage = ({
         const climaName = climas.find(c => c.id === filters.clima)?.name || '';
         const dressCodeName = dressCodes.find(d => d.id === filters.dressCode)?.name || '';
         onOutfitLiked({ ...outfit, name: 'Outfit', ocasion: ocasionName, clima: climaName, dressCode: dressCodeName });
+        onRemoveFromHistory(id);
       }
     }
     setLikedOutfits(newLiked);
