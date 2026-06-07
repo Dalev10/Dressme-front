@@ -94,7 +94,7 @@ const OutfitsPage = ({
         return;
       }
       const data = await res.json();
-      setOutfits(Array.isArray(data) ? data : []);
+      setOutfits(Array.isArray(data.outfits) ? data.outfits : []);
       setGenerated(true);
     } catch {
       setGenerateError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -391,7 +391,7 @@ const OutfitsPage = ({
             )}
 
             {/* Estado activo — outfits generados */}
-            {generated && !loading && (
+            {generated && !loading && outfits.length > 0 && (
               <>
                 {!hasPrendas ? (
                   <div className="rounded-3xl glass-effect p-16 text-center" style={{ border: '4px solid rgba(209,213,219,0.6)', boxShadow: '0 4px 16px rgba(192,192,192,0.25)' }}>
@@ -452,7 +452,7 @@ const OutfitsPage = ({
                                 {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
                               </p>
                               {outfit.totalScore != null && (
-                                <p className="text-xs text-brand-dark/60">Score: {Math.round(outfit.totalScore * 100)}%</p>
+                                <p className="text-xs text-brand-dark/60">Score: {Math.round(outfit.totalScore)}%</p>
                               )}
                             </div>
 
