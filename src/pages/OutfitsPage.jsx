@@ -19,50 +19,6 @@ import {
   Lightbulb,
 } from 'lucide-react';
 
-const mockOutfits = [
-  {
-    id: 1,
-    name: 'Look Casual Chic',
-    occasion: 'Casual',
-    garments: 3,
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80',
-  },
-  {
-    id: 2,
-    name: 'Estilo Ejecutivo',
-    occasion: 'Trabajo',
-    garments: 4,
-    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&q=80',
-  },
-  {
-    id: 3,
-    name: 'Tarde de Verano',
-    occasion: 'Casual',
-    garments: 3,
-    image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80',
-  },
-  {
-    id: 4,
-    name: 'Noche Elegante',
-    occasion: 'Formal',
-    garments: 5,
-    image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&q=80',
-  },
-  {
-    id: 5,
-    name: 'Weekend Vibes',
-    occasion: 'Casual',
-    garments: 3,
-    image: 'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=400&q=80',
-  },
-  {
-    id: 6,
-    name: 'Brunch Look',
-    occasion: 'Social',
-    garments: 4,
-    image: 'https://images.unsplash.com/photo-1529139574466-a303027614b3?w=400&q=80',
-  },
-];
 
 const OutfitsPage = ({
   user,
@@ -84,6 +40,8 @@ const OutfitsPage = ({
   const [filters, setFilters] = useState({ ocasion: '', clima: '', dressCode: '' });
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [generateError, setGenerateError] = useState(null);
+  const [outfits, setOutfits] = useState([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [ghostIndex,    setGhostIndex]    = useState(0);
   const [recomIndex,    setRecomIndex]    = useState(0);
@@ -108,15 +66,41 @@ const OutfitsPage = ({
     return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   };
 
-  // TODO: conectar con POST /api/v1/outfits/generate cuando el endpoint exista
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!filters.ocasion || !filters.clima) {
+      setGenerateError('Selecciona una ocasión y un clima antes de generar');
+      return;
+    }
     setLoading(true);
     setGenerated(false);
+    setGenerateError(null);
     setCarouselIndex(0);
-    setTimeout(() => {
-      setLoading(false);
+    const token = localStorage.getItem('authToken');
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'}/api/v1/outfits/generate`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ occasionId: filters.ocasion, weatherId: filters.clima }),
+        }
+      );
+      if (res.status === 422) {
+        setGenerateError('No tienes suficientes prendas para generar un outfit');
+        return;
+      }
+      if (!res.ok) {
+        setGenerateError('No se pudo generar el outfit. Intenta de nuevo.');
+        return;
+      }
+      const data = await res.json();
+      setOutfits(Array.isArray(data) ? data : []);
       setGenerated(true);
-    }, 1500);
+    } catch {
+      setGenerateError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrev = () => {
@@ -124,7 +108,7 @@ const OutfitsPage = ({
   };
 
   const handleNext = () => {
-    setCarouselIndex((prev) => Math.min(mockOutfits.length - VISIBLE, prev + 1));
+    setCarouselIndex((prev) => Math.min(outfits.length - VISIBLE, prev + 1));
   };
 
   const handleLike = (id) => {
@@ -136,7 +120,7 @@ const OutfitsPage = ({
     } else {
       newLiked.add(id);
       newDisliked.delete(id);
-      const outfit = mockOutfits.find((o) => o.id === id);
+      const outfit = outfits.find((o) => o.id === id);
       if (outfit) onOutfitLiked(outfit);
     }
     setLikedOutfits(newLiked);
@@ -157,7 +141,7 @@ const OutfitsPage = ({
     setLikedOutfits(newLiked);
   };
 
-  const visibleOutfits = mockOutfits.slice(carouselIndex, carouselIndex + VISIBLE);
+  const visibleOutfits = outfits.slice(carouselIndex, carouselIndex + VISIBLE);
 
   return (
     <div className="relative min-h-screen bg-brand-cream overflow-hidden">
@@ -248,8 +232,8 @@ const OutfitsPage = ({
             >
               {user?.profilePicture ? (
                 <img
-                  src={user.profilePicture}
-                  alt={user.displayName}
+                  src={user?.profilePicture}
+                  alt={user?.displayName ?? 'Usuario'}
                   className="w-12 h-12 rounded-full object-cover border border-brand-dark/10 ring-2 ring-gray-400/80 ring-offset-1"
                 />
               ) : (
@@ -294,7 +278,7 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {ocasiones.map((o) => <option key={o} value={o}>{o}</option>)}
+                    {(Array.isArray(ocasiones) ? ocasiones : []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
@@ -310,7 +294,7 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {climas.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {(Array.isArray(climas) ? climas : []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
@@ -326,13 +310,21 @@ const OutfitsPage = ({
                     className="w-full appearance-none rounded-3xl border border-brand-sand bg-white px-4 py-2.5 pr-8 text-xs text-brand-dark outline-none transition-all duration-200 hover:border-brand-dark/30"
                   >
                     <option value="">Seleccionar...</option>
-                    {dressCodes.map((d) => <option key={d} value={d}>{d}</option>)}
+                    {(Array.isArray(dressCodes) ? dressCodes : []).map((d) => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-brand-dark/40" />
                 </div>
               </div>
 
             </div>
+
+            {/* Error de generación */}
+            {generateError && (
+              <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 mt-4 text-sm text-red-700">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{generateError}</span>
+              </div>
+            )}
 
             {/* Botón Generar */}
             <button
@@ -436,17 +428,32 @@ const OutfitsPage = ({
                             className="rounded-3xl overflow-hidden relative group cursor-pointer shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1"
                             style={{ height: '380px' }}
                           >
-                            {/* Imagen */}
-                            <img
-                              src={outfit.image}
-                              alt={outfit.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
+                            {/* Grid de prendas del outfit */}
+                            {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
+                              <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={url}
+                                    alt={`Prenda ${idx + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="w-full h-full bg-brand-sand/30 flex items-center justify-center">
+                                <Shirt className="w-12 h-12 text-brand-dark/20" />
+                              </div>
+                            )}
 
                             {/* Panel inferior semitransparente */}
                             <div className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm p-4">
-                              <p className="text-sm font-semibold text-brand-dark">{outfit.name}</p>
-                              <p className="text-xs text-brand-dark/60">{outfit.occasion} · {outfit.garments} prendas</p>
+                              <p className="text-sm font-semibold text-brand-dark">
+                                {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
+                              </p>
+                              {outfit.totalScore != null && (
+                                <p className="text-xs text-brand-dark/60">Score: {Math.round(outfit.totalScore * 100)}%</p>
+                              )}
                             </div>
 
                             {/* Botones like/dislike */}
@@ -478,7 +485,7 @@ const OutfitsPage = ({
 
                       <button
                         onClick={handleNext}
-                        disabled={carouselIndex >= mockOutfits.length - VISIBLE}
+                        disabled={carouselIndex >= outfits.length - VISIBLE}
                         className="flex-shrink-0 w-10 h-10 rounded-full border border-brand-sand bg-white flex items-center justify-center text-brand-dark hover:bg-brand-sand/40 transition-all duration-200 disabled:cursor-not-allowed"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -487,7 +494,7 @@ const OutfitsPage = ({
 
                     {/* Indicadores de posición */}
                     <div className="flex justify-center gap-2 mt-6">
-                      {Array.from({ length: mockOutfits.length - VISIBLE + 1 }).map((_, i) => (
+                      {Array.from({ length: Math.max(0, outfits.length - VISIBLE + 1) }).map((_, i) => (
                         <button
                           key={i}
                           onClick={() => setCarouselIndex(i)}

@@ -22,10 +22,20 @@ function App() {
     const saved = localStorage.getItem('dressme_user');
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.isCalibrated ? 'home' : 'onboarding';
+      if (!parsed.isCalibrated) return 'onboarding';
+      const savedView = localStorage.getItem('dressme_current_view');
+      const validViews = ['home', 'wardrobePage', 'outfits', 'favorites', 'config'];
+      return (savedView && validViews.includes(savedView)) ? savedView : 'home';
     }
     return 'landing';
   });
+
+  const navigateTo = useCallback((view) => {
+    const persistable = ['home', 'wardrobePage', 'outfits', 'favorites', 'config'];
+    if (persistable.includes(view)) localStorage.setItem('dressme_current_view', view);
+    else localStorage.removeItem('dressme_current_view');
+    setCurrentView(view);
+  }, []);
 
   const [isFirstTimeUpload, setIsFirstTimeUpload] = useState(false);
   const [wardrobeItems, setWardrobeItems]         = useState([]);
@@ -59,7 +69,7 @@ function App() {
         .catch(() => {}),
       fetch(`${apiBaseUrl}/api/v1/wardrobe/catalog`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setCatalog({ occasions: (data.occasions || []).map(o => o.name), weathers: (data.weathers || []).map(w => w.name) }); })
+        .then(data => { if (data) setCatalog({ occasions: data.occasions || [], weathers: data.weathers || [] }); })
         .catch(() => {}),
       fetch(`${apiBaseUrl}/api/v1/wardrobe/list?userId=${userId}`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
         .then(r => r.ok ? r.json() : null)
@@ -100,8 +110,8 @@ function App() {
       if (!res.ok) return;
       const data = await res.json();
       setCatalog({
-        occasions: (data.occasions || []).map(o => o.name),
-        weathers:  (data.weathers  || []).map(w => w.name),
+        occasions: data.occasions || [],
+        weathers:  data.weathers  || [],
       });
     } catch (err) {
       console.error('App: error cargando catálogo', err);
@@ -131,12 +141,13 @@ function App() {
     loadWardrobe(userData.id, userData.token);
     loadCatalog(userData.token);
     loadEditCatalog(userData.token);
-    setCurrentView(!userData.isCalibrated ? 'onboarding' : 'home');
+    navigateTo(!userData.isCalibrated ? 'onboarding' : 'home');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('dressme_user');
+    localStorage.removeItem('dressme_current_view');
     setUser(null);
     setWardrobeItems([]);
     setCatalog({ occasions: [], weathers: [] });
@@ -179,7 +190,7 @@ function App() {
           setUser(updatedUser);
           localStorage.setItem('dressme_user', JSON.stringify(updatedUser));
           setIsFirstTimeUpload(true);
-          setCurrentView('wardrobeUpload');
+          navigateTo('wardrobeUpload');
         }}
       />
     );
@@ -190,7 +201,7 @@ function App() {
       <WardrobeUploadPage
         user={user}
         onLogout={handleLogout}
-        onUploadComplete={() => setCurrentView('home')}
+        onUploadComplete={() => navigateTo('home')}
         isFirstTime={isFirstTimeUpload}
         onPrendaGuardada={handlePrendaGuardada}
         editCatalog={editCatalog}
@@ -203,12 +214,12 @@ function App() {
       <HomePage
         user={user}
         onLogout={handleLogout}
-        onGoToOnboarding={() => setCurrentView('onboarding')}
-        onGoToWardrobe={() => { setIsFirstTimeUpload(false); setCurrentView('wardrobeUpload'); }}
-        onGoToWardrobePage={() => setCurrentView('wardrobePage')}
-        onGoToOutfits={() => setCurrentView('outfits')}
-        onGoToFavorites={() => setCurrentView('favorites')}
-        onGoToConfig={() => setCurrentView('config')}
+        onGoToOnboarding={() => navigateTo('onboarding')}
+        onGoToWardrobe={() => { setIsFirstTimeUpload(false); navigateTo('wardrobeUpload'); }}
+        onGoToWardrobePage={() => navigateTo('wardrobePage')}
+        onGoToOutfits={() => navigateTo('outfits')}
+        onGoToFavorites={() => navigateTo('favorites')}
+        onGoToConfig={() => navigateTo('config')}
         prendas={wardrobeItems.map(item => ({
           id:    item.id,
           image: item.imageUrl,
@@ -224,12 +235,12 @@ function App() {
       <WardrobePage
         user={user}
         onLogout={handleLogout}
-        onAddCloth={() => { setIsFirstTimeUpload(false); setCurrentView('wardrobeUpload'); }}
-        onGoToHome={() => setCurrentView('home')}
-        onGoToWardrobePage={() => setCurrentView('wardrobePage')}
-        onGoToOutfits={() => setCurrentView('outfits')}
-        onGoToFavorites={() => setCurrentView('favorites')}
-        onGoToConfig={() => setCurrentView('config')}
+        onAddCloth={() => { setIsFirstTimeUpload(false); navigateTo('wardrobeUpload'); }}
+        onGoToHome={() => navigateTo('home')}
+        onGoToWardrobePage={() => navigateTo('wardrobePage')}
+        onGoToOutfits={() => navigateTo('outfits')}
+        onGoToFavorites={() => navigateTo('favorites')}
+        onGoToConfig={() => navigateTo('config')}
         prendas={wardrobeItems}
         onEliminarPrenda={handleDeletePrenda}
         onActualizarPrenda={handleUpdatePrenda}
@@ -242,12 +253,12 @@ function App() {
       <OutfitsPage
         user={user}
         onLogout={handleLogout}
-        onGoToHome={() => setCurrentView('home')}
-        onGoToWardrobe={() => { setIsFirstTimeUpload(false); setCurrentView('wardrobeUpload'); }}
-        onGoToWardrobePage={() => setCurrentView('wardrobePage')}
-        onGoToOutfits={() => setCurrentView('outfits')}
-        onGoToFavorites={() => setCurrentView('favorites')}
-        onGoToConfig={() => setCurrentView('config')}
+        onGoToHome={() => navigateTo('home')}
+        onGoToWardrobe={() => { setIsFirstTimeUpload(false); navigateTo('wardrobeUpload'); }}
+        onGoToWardrobePage={() => navigateTo('wardrobePage')}
+        onGoToOutfits={() => navigateTo('outfits')}
+        onGoToFavorites={() => navigateTo('favorites')}
+        onGoToConfig={() => navigateTo('config')}
         ocasiones={catalog.occasions}
         climas={catalog.weathers}
         dressCodes={[]}
@@ -268,12 +279,12 @@ function App() {
       <FavoritesPage
         user={user}
         onLogout={handleLogout}
-        onGoToHome={() => setCurrentView('home')}
-        onGoToWardrobePage={() => setCurrentView('wardrobePage')}
-        onGoToOutfits={() => setCurrentView('outfits')}
-        onGoToFavorites={() => setCurrentView('favorites')}
-        onGoToWardrobe={() => { setIsFirstTimeUpload(false); setCurrentView('wardrobeUpload'); }}
-        onGoToConfig={() => setCurrentView('config')}
+        onGoToHome={() => navigateTo('home')}
+        onGoToWardrobePage={() => navigateTo('wardrobePage')}
+        onGoToOutfits={() => navigateTo('outfits')}
+        onGoToFavorites={() => navigateTo('favorites')}
+        onGoToWardrobe={() => { setIsFirstTimeUpload(false); navigateTo('wardrobeUpload'); }}
+        onGoToConfig={() => navigateTo('config')}
         ocasiones={catalog.occasions}
         climas={catalog.weathers}
         dressCodes={[]}
@@ -288,11 +299,11 @@ function App() {
       <ConfigPage
         user={user}
         onLogout={handleLogout}
-        onGoToHome={() => setCurrentView('home')}
-        onGoToWardrobePage={() => setCurrentView('wardrobePage')}
-        onGoToOutfits={() => setCurrentView('outfits')}
-        onGoToFavorites={() => setCurrentView('favorites')}
-        onGoToOnboarding={() => setCurrentView('onboarding')}
+        onGoToHome={() => navigateTo('home')}
+        onGoToWardrobePage={() => navigateTo('wardrobePage')}
+        onGoToOutfits={() => navigateTo('outfits')}
+        onGoToFavorites={() => navigateTo('favorites')}
+        onGoToOnboarding={() => navigateTo('onboarding')}
       />
     );
   }

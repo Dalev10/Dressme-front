@@ -153,7 +153,7 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
         <header className="bg-brand-cream border-b border-brand-sand px-8 py-8 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-serif font-bold text-brand-dark mb-2">
-              ¡Bienvenid@ de nuevo{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!
+              ¡Bienvenid@ de nuevo{user?.displayName ? `, ${user?.displayName?.split(' ')[0] ?? 'Usuario'}` : ''}!
             </h1>
             <p className="text-brand-dark/60 font-sans text-sm">
               Descubre tu outfit perfecto hoy
@@ -230,7 +230,7 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
 
             {prendas.length > 0 ? (
               <div className="flex gap-4 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory">
-                {prendas.map((garment) => (
+                {(Array.isArray(prendas) ? prendas : []).map((garment) => (
                   <div
                     key={garment.id}
                     className="flex-shrink-0 w-40 snap-center cursor-pointer hover:opacity-90 transition-opacity"
@@ -330,7 +330,7 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
 
             {outfits.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {outfits.map((outfit) => (
+                {(Array.isArray(outfits) ? outfits : []).map((outfit) => (
                   <div
                     key={outfit.id}
                     className="group cursor-pointer relative overflow-hidden rounded-2xl border-4 border-gray-300/60 shadow-[0_4px_16px_rgba(192,192,192,0.25)]"
@@ -396,7 +396,7 @@ const HomePage = ({ user, onLogout, onGoToOnboarding, onGoToWardrobe, onGoToWard
 
             {favoritosData.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {favoritosData.map((favorite) => (
+                {(Array.isArray(favoritosData) ? favoritosData : []).map((favorite) => (
                   <div
                     key={favorite.id}
                     className="group cursor-pointer relative overflow-hidden rounded-2xl border-4 border-gray-300/60 shadow-[0_4px_16px_rgba(192,192,192,0.25)]"
