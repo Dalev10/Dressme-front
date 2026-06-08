@@ -1,14 +1,7 @@
-import GlassContainer from './GlassContainer';
-
-/**
- * FeatureCard displays a single app feature with an icon, title, and description.
- * It features elegant hover states and micro-interactions.
- */
 const FeatureCard = ({ icon: Icon, title, description, delayClass = 'animate-slide-up' }) => {
   return (
-    <GlassContainer
-      hoverEffect={true}
-      className={`p-8 flex flex-col items-center text-center max-w-sm w-full mx-auto border border-white/20 ${delayClass}`}
+    <div
+      className={`group rounded-3xl bg-gradient-to-br from-[#F3EFE9] to-[#F8F5F1] p-8 flex flex-col items-center text-center max-w-sm w-full mx-auto border-4 border-gray-300/50 hover:shadow-md transition-all duration-300 ${delayClass}`}
     >
       {/* Icon Wrapper with a warm, soft gradient circle */}
       <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-tr from-brand-sand/50 to-brand-beige/80 mb-6 shadow-inner group-hover:scale-110 transition-transform duration-500 ease-out border border-white/40">
@@ -26,7 +19,7 @@ const FeatureCard = ({ icon: Icon, title, description, delayClass = 'animate-sli
       <p className="font-sans text-sm text-brand-dark/70 leading-relaxed font-light">
         {description}
       </p>
-    </GlassContainer>
+    </div>
   );
 };
 

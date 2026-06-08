@@ -18,6 +18,7 @@ import {
   X,
   Lightbulb,
 } from 'lucide-react';
+import FeatureOutfitCard from '../components/FeatureOutfitCard';
 
 
 const OutfitsPage = ({
@@ -435,63 +436,16 @@ const OutfitsPage = ({
 
                       <div className="grid grid-cols-3 gap-6 flex-1">
                         {visibleOutfits.map((outfit) => (
-                          <div
+                          <FeatureOutfitCard
                             key={outfit.id}
-                            className="rounded-3xl overflow-hidden relative group cursor-pointer shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1"
-                            style={{ height: '380px' }}
-                          >
-                            {/* Grid de prendas del outfit */}
-                            {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
-                              <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={url}
-                                    alt={`Prenda ${idx + 1}`}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  />
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="w-full h-full bg-brand-sand/30 flex items-center justify-center">
-                                <Shirt className="w-12 h-12 text-brand-dark/20" />
-                              </div>
-                            )}
-
-                            {/* Panel inferior semitransparente */}
-                            <div className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm p-4">
-                              <p className="text-sm font-semibold text-brand-dark">
-                                {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
-                              </p>
-                              {outfit.totalScore != null && (
-                                <p className="text-xs text-brand-dark/60">Score: {Math.round(outfit.totalScore)}%</p>
-                              )}
-                            </div>
-
-                            {/* Botones like/dislike */}
-                            <div className="absolute top-3 right-3 flex flex-col gap-2">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleLike(outfit.id); }}
-                                className={`btn-shimmer w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 overflow-hidden relative ${
-                                  likedOutfits.has(outfit.id)
-                                    ? 'bg-brand-charcoal text-white'
-                                    : 'bg-white/90 text-brand-dark hover:bg-brand-charcoal hover:text-white'
-                                }`}
-                              >
-                                <ThumbsUp className="w-4 h-4 relative z-10" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDislike(outfit.id); }}
-                                className={`btn-shimmer w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 overflow-hidden relative ${
-                                  dislikedOutfits.has(outfit.id)
-                                    ? 'bg-brand-sand text-brand-dark'
-                                    : 'bg-white/90 text-brand-dark hover:bg-brand-sand'
-                                }`}
-                              >
-                                <ThumbsDown className="w-4 h-4 relative z-10" />
-                              </button>
-                            </div>
-                          </div>
+                            outfit={outfit}
+                            height="380px"
+                            onLike={(o) => handleLike(o.id)}
+                            onDislike={handleDislike}
+                            isLiked={likedOutfits.has(outfit.id)}
+                            showScore={true}
+                            showLikeButtons={true}
+                          />
                         ))}
                       </div>
 

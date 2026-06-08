@@ -8,14 +8,12 @@ import {
   HelpCircle,
   ChevronDown,
   LogOut,
-  MapPin,
-  Cloud,
-  Tag,
   X,
   Lightbulb,
   Wand2,
 } from 'lucide-react';
 import OutfitHistoryCard from '../components/OutfitHistoryCard';
+import FeatureOutfitCard from '../components/FeatureOutfitCard';
 
 const FavoritesPage = ({
   user,
@@ -298,67 +296,15 @@ const FavoritesPage = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {favoritosFiltrados.map((outfit) => {
-                      return (
-                        <div
-                          key={outfit.id}
-                          className="group relative rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1 flex flex-col border-4 border-gray-300/60"
-                          style={{ height: '380px' }}
-                        >
-                          {/* Imágenes del outfit */}
-                          <div className="relative flex-1 overflow-hidden">
-                            {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
-                              <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={url}
-                                    alt={`Prenda ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                  />
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="w-full h-full bg-brand-sand/30 flex items-center justify-center">
-                                <p className="text-xs text-brand-dark/40">No se pudieron cargar las imágenes</p>
-                              </div>
-                            )}
-                            {/* Remove favourite */}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(outfit.id); }}
-                              className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                              aria-label="Quitar de favoritos"
-                            >
-                              <Heart className="w-4 h-4 fill-brand-charcoal text-brand-charcoal" />
-                            </button>
-                          </div>
-
-                          {/* Info */}
-                          <div className="p-4 bg-white/50 backdrop-blur-sm">
-                            <p className="text-sm font-semibold text-brand-dark mb-2">
-                              {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
-                            </p>
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2 text-xs text-brand-dark/60">
-                                <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>{outfit.ocasion}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-brand-dark/60">
-                                <Cloud className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span>{outfit.clima}</span>
-                              </div>
-                              {outfit.dressCode && (
-                                <div className="flex items-center gap-2 text-xs text-brand-dark/60">
-                                  <Tag className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span>{outfit.dressCode}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {favoritosFiltrados.map((outfit) => (
+                      <FeatureOutfitCard
+                        key={outfit.id}
+                        outfit={outfit}
+                        height="380px"
+                        isLiked={true}
+                        onDislike={handleRemoveFavorite}
+                      />
+                    ))}
                   </div>
                 )}
               </>
