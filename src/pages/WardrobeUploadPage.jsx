@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Cloud, LogOut, ChevronDown, Loader2, AlertCircle,
+  Cloud, LogOut, ChevronDown, Loader2, AlertCircle, AlertTriangle,
   Tag, Layers, Palette, Sparkles, Pencil, X,
 } from 'lucide-react';
 
@@ -14,6 +14,8 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
   const [isUploading,      setIsUploading]       = useState(false);
   const [isAnalyzing,      setIsAnalyzing]       = useState(false);
   const [uploadError,      setUploadError]       = useState('');
+  const [analysisError,    setAnalysisError]     = useState(null); // { clothingId, imageUrl }
+  const [isRetrying,       setIsRetrying]        = useState(false);
   const [selectedFile,     setSelectedFile]      = useState(null);
   const [profileMenuOpen,  setProfileMenuOpen]   = useState(false);
   const [aiResult,         setAiResult]          = useState(null);
@@ -57,6 +59,33 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
   // ── Cleanup polling on unmount ─────────────────────────────────────────────────
 
   useEffect(() => () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); }, []);
+
+  // ── Restore analysis error from localStorage on mount ─────────────────────────
+
+  useEffect(() => {
+    const failedId  = localStorage.getItem('failed_clothing_id');
+    const failedUrl = localStorage.getItem('failed_image_url');
+    if (!failedId) return;
+    const token = localStorage.getItem('authToken');
+    fetch(`${apiBaseUrl}/api/v1/wardrobe/${failedId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(detail => {
+        if (!detail || detail.isProcessed) {
+          localStorage.removeItem('failed_clothing_id');
+          localStorage.removeItem('failed_image_url');
+          return;
+        }
+        setAnalysisError({ clothingId: failedId, imageUrl: detail.imageUrl });
+        setPreviewUrl(detail.imageUrl);
+      })
+      .catch(() => {
+        localStorage.removeItem('failed_clothing_id');
+        localStorage.removeItem('failed_image_url');
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Derived catalog helpers ───────────────────────────────────────────────────
 
@@ -129,26 +158,21 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
         } else if (Date.now() < deadline) {
           pollTimerRef.current = setTimeout(checkDetail, POLL_INTERVAL_MS);
         } else {
-          // Timeout — mostrar lo que haya aunque isProcessed=false
           setIsAnalyzing(false);
-          const catEntry = editCatalogRef.current.categories.find(c => c.id === detail.categoryId);
-          setAiResult({
-            id:          detail.id,
-            imageUrl:    detail.imageUrl,
-            category:    detail.categoryName ?? '—',
-            style:       detail.styleName    ?? '—',
-            color:       detail.colorName    ?? '—',
-            ocasion:     detail.occasionName ?? '—',
-            clima:       detail.weatherName  ?? '—',
-            categoryId:  detail.categoryId,
-            typeId:      catEntry?.parentId ?? detail.categoryId,
-            styleId:     detail.styleId,
-          });
-          setUploadError('El análisis tardó más de lo esperado. Puedes editar la prenda manualmente.');
+          setAnalysisError({ clothingId: detail.id, imageUrl: detail.imageUrl });
+          setPreviewUrl(prev => prev || detail.imageUrl);
+          localStorage.setItem('failed_clothing_id', detail.id);
+          localStorage.setItem('failed_image_url',   detail.imageUrl);
         }
       } catch (err) {
         setIsAnalyzing(false);
-        setUploadError('Error consultando el resultado del análisis.');
+        const failedId = localStorage.getItem('pending_clothing_id');
+        if (failedId) {
+          setAnalysisError({ clothingId: failedId, imageUrl: null });
+          localStorage.setItem('failed_clothing_id', failedId);
+        } else {
+          setUploadError('Error consultando el resultado del análisis.');
+        }
       }
     };
 
@@ -210,6 +234,28 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
     setEditMode(false);
   };
 
+  const handleRetry = async () => {
+    if (!analysisError?.clothingId) return;
+    setIsRetrying(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(
+        `${apiBaseUrl}/api/v1/wardrobe/${analysisError.clothingId}/reanalyze`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      localStorage.removeItem('failed_clothing_id');
+      localStorage.removeItem('failed_image_url');
+      setAnalysisError(null);
+      setIsAnalyzing(true);
+      pollDetail(analysisError.clothingId, Date.now() + POLL_TIMEOUT_MS);
+    } catch (err) {
+      setUploadError(err.message || 'No se pudo reintentar el análisis.');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   // ── Discard draft ─────────────────────────────────────────────────────────────
   // Borra la prenda no confirmada. Se llama al cerrar el modal sin guardar.
 
@@ -217,6 +263,9 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
     const clothingId = aiResult?.id ?? localStorage.getItem('pending_clothing_id');
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     localStorage.removeItem('pending_clothing_id');
+    localStorage.removeItem('failed_clothing_id');
+    localStorage.removeItem('failed_image_url');
+    setAnalysisError(null);
     setAiResult(null);
     setEditMode(false);
     setEditedData({});
@@ -414,6 +463,61 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
           </div>
         </div>
       </main>
+
+      {/* ── MODAL ERROR ANÁLISIS ────────────────────────────────────────────── */}
+      {analysisError && !showConfirmModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 z-[100] flex items-center justify-center p-8">
+          <div className="relative bg-white rounded-3xl overflow-hidden flex w-full max-w-4xl max-h-[90vh] shadow-[0_32px_80px_rgba(44,42,41,0.25)] border-4 border-gray-300/50">
+
+            {/* Imagen */}
+            <div className="w-1/2 flex-shrink-0 min-h-[400px] bg-brand-cream flex items-center justify-center">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Prenda" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-brand-sand/40 flex items-center justify-center">
+                  <AlertTriangle className="w-10 h-10 text-brand-dark/30" />
+                </div>
+              )}
+            </div>
+
+            {/* Detalle del error */}
+            <div className="flex-1 pl-8 pb-8 pt-14 pr-14 flex flex-col justify-between gap-6 min-h-fit">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0" />
+                  <h2 className="text-2xl font-serif font-bold text-brand-dark leading-tight">
+                    Error al procesar la prenda
+                  </h2>
+                </div>
+                <p className="text-sm text-brand-dark/60 leading-relaxed">
+                  Nuestra IA no pudo analizar la imagen en este momento.
+                  La prenda ya fue guardada — puedes intentarlo de nuevo sin volver a subir la imagen.
+                </p>
+                {uploadError && (
+                  <p className="text-xs text-red-500 bg-red-50 rounded-xl px-4 py-2">{uploadError}</p>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-brand-sand/50 flex flex-col gap-3">
+                <button
+                  onClick={handleRetry}
+                  disabled={isRetrying}
+                  className="btn-shimmer relative inline-flex items-center justify-center w-full rounded-full bg-brand-charcoal px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:opacity-90 overflow-hidden disabled:opacity-60"
+                >
+                  {isRetrying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  <span className="relative z-10">{isRetrying ? 'Reintentando...' : 'Intentar de nuevo'}</span>
+                </button>
+                <button
+                  onClick={discardDraft}
+                  className="btn-shimmer relative inline-flex items-center justify-center w-full rounded-full bg-brand-sand px-6 py-2.5 text-sm font-medium text-brand-dark transition-all duration-300 hover:bg-brand-sand/70 overflow-hidden"
+                >
+                  <span className="relative z-10">Descartar prenda</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL RESULTADO IA ─────────────────────────────────────────────────── */}
       {aiResult && !showConfirmModal && (
