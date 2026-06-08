@@ -28,7 +28,7 @@ const WardrobePage = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting,        setIsDeleting]        = useState(false);
   const [isSaving,          setIsSaving]          = useState(false);
-  const [editCatalog,       setEditCatalog]       = useState({ categories: [], styles: [] });
+  const [editCatalog,       setEditCatalog]       = useState({ categories: [], styles: [], colors: [], occasions: [], weathers: [] });
   const [toast,             setToast]             = useState('');
   const [filterCategory,    setFilterCategory]    = useState('');
   const profileMenuRef = useRef(null);
@@ -84,6 +84,9 @@ const WardrobePage = ({
         categoryName: detail.categoryName ?? '',
         styleId:      detail.styleId      ?? '',
         styleName:    detail.styleName    ?? '',
+        colorId:      detail.colorId      ?? '',
+        occasionIds:  detail.occasionId   ? [detail.occasionId]  : [],
+        weatherIds:   detail.weatherId    ? [detail.weatherId]   : [],
       });
     } catch (err) {
       console.error('WardrobePage: error cargando detalle', err);
@@ -134,9 +137,12 @@ const WardrobePage = ({
           method: 'PATCH',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            typeId:     editFields.categoryId,
-            categoryId: editFields.categoryId,
-            styleId:    editFields.styleId,
+            typeId:      editFields.categoryId,
+            categoryId:  editFields.categoryId,
+            styleId:     editFields.styleId,
+            colorId:     editFields.colorId     || null,
+            occasionIds: editFields.occasionIds || [],
+            weatherIds:  editFields.weatherIds  || [],
           }),
         }
       );
@@ -426,26 +432,96 @@ const WardrobePage = ({
                     <div className="flex items-center gap-3">
                       <Palette className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
                       <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Color principal</span>
-                      <div className="flex items-center gap-2">
-                        {selectedDetail.colorHex && (
-                          <span className="w-4 h-4 rounded-full border border-brand-sand/50 flex-shrink-0" style={{ backgroundColor: selectedDetail.colorHex }} />
-                        )}
-                        <span className="text-sm text-brand-dark font-medium">{selectedDetail.colorName || '—'}</span>
-                      </div>
+                      {editMode ? (
+                        <div className="relative flex-1">
+                          <select
+                            value={editFields.colorId}
+                            onChange={e => setEditFields(p => ({ ...p, colorId: e.target.value }))}
+                            className="w-full appearance-none text-sm text-brand-dark font-medium bg-brand-cream border border-brand-sand rounded-xl px-3 py-1 pr-7 outline-none focus:border-brand-dark/30 cursor-pointer"
+                          >
+                            <option value="">— Selecciona —</option>
+                            {(Array.isArray(editCatalog.colors) ? editCatalog.colors : []).map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-brand-dark/40" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {selectedDetail.colorHex && (
+                            <span className="w-4 h-4 rounded-full border border-brand-sand/50 flex-shrink-0" style={{ backgroundColor: selectedDetail.colorHex }} />
+                          )}
+                          <span className="text-sm text-brand-dark font-medium">{selectedDetail.colorName || '—'}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Ocasión */}
-                    <div className="flex items-center gap-3">
-                      <Layers className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Ocasión</span>
-                      <span className="text-sm text-brand-dark font-medium">{selectedDetail.occasionName || '—'}</span>
+                    <div className="flex items-start gap-3">
+                      <Layers className="w-4 h-4 text-brand-dark/40 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0 mt-0.5">Ocasión</span>
+                      {editMode ? (
+                        <div className="flex flex-wrap gap-1.5 flex-1">
+                          {(Array.isArray(editCatalog.occasions) ? editCatalog.occasions : []).map(o => {
+                            const selected = (editFields.occasionIds || []).includes(o.id);
+                            return (
+                              <button
+                                key={o.id}
+                                type="button"
+                                onClick={() => setEditFields(p => ({
+                                  ...p,
+                                  occasionIds: selected
+                                    ? p.occasionIds.filter(id => id !== o.id)
+                                    : [...(p.occasionIds || []), o.id],
+                                }))}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                  selected
+                                    ? 'bg-brand-charcoal text-white border-brand-charcoal'
+                                    : 'bg-brand-cream text-brand-dark/60 border-brand-sand hover:border-brand-dark/30'
+                                }`}
+                              >
+                                {o.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-brand-dark font-medium mt-0.5">{selectedDetail.occasionName || '—'}</span>
+                      )}
                     </div>
 
                     {/* Clima */}
-                    <div className="flex items-center gap-3">
-                      <Cloud className="w-4 h-4 text-brand-dark/40 flex-shrink-0" />
-                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0">Clima</span>
-                      <span className="text-sm text-brand-dark font-medium">{selectedDetail.weatherName || '—'}</span>
+                    <div className="flex items-start gap-3">
+                      <Cloud className="w-4 h-4 text-brand-dark/40 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-brand-dark/40 w-28 flex-shrink-0 mt-0.5">Clima</span>
+                      {editMode ? (
+                        <div className="flex flex-wrap gap-1.5 flex-1">
+                          {(Array.isArray(editCatalog.weathers) ? editCatalog.weathers : []).map(w => {
+                            const selected = (editFields.weatherIds || []).includes(w.id);
+                            return (
+                              <button
+                                key={w.id}
+                                type="button"
+                                onClick={() => setEditFields(p => ({
+                                  ...p,
+                                  weatherIds: selected
+                                    ? p.weatherIds.filter(id => id !== w.id)
+                                    : [...(p.weatherIds || []), w.id],
+                                }))}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                  selected
+                                    ? 'bg-brand-charcoal text-white border-brand-charcoal'
+                                    : 'bg-brand-cream text-brand-dark/60 border-brand-sand hover:border-brand-dark/30'
+                                }`}
+                              >
+                                {w.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-brand-dark font-medium mt-0.5">{selectedDetail.weatherName || '—'}</span>
+                      )}
                     </div>
                   </div>
 
