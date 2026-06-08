@@ -3,7 +3,6 @@ import {
   Cloud, LogOut, ChevronDown, Loader2, AlertCircle,
   Tag, Layers, Palette, Sparkles, Pencil, X,
 } from 'lucide-react';
-import GlassContainer from '../components/GlassContainer';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
@@ -342,7 +341,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
             </p>
           </div>
 
-          <GlassContainer className="p-8 md:p-12 mb-8 animate-slide-up-delay">
+          <div className="glass-effect p-8 md:p-12 mb-8 animate-slide-up-delay rounded-3xl">
             <div
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -391,7 +390,7 @@ const WardrobeUploadPage = ({ user, onLogout, onUploadComplete, isFirstTime = fa
                 <p className="text-sm text-red-700">{uploadError}</p>
               </div>
             )}
-          </GlassContainer>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up-delay-more">
             <button

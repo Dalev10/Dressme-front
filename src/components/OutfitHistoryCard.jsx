@@ -1,11 +1,23 @@
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useState } from 'react';
+import OutfitDetailModal from './OutfitDetailModal';
 
-const OutfitHistoryCard = ({ outfit, onLike, onDislike, isLiked = false }) => (
-  <div
-    className="group relative rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1 flex flex-col border-4 border-gray-300/60"
-    style={{ height: '380px' }}
-  >
-    <div className="relative flex-1 overflow-hidden">
+const OutfitHistoryCard = ({ outfit, onLike, onDislike, isLiked = false }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  return (
+    <>
+      <OutfitDetailModal
+        outfit={outfit}
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
+      <div
+        onClick={() => setModalOpen(true)}
+        className="group relative rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(44,42,41,0.08)] hover:shadow-[0_18px_60px_rgba(44,42,41,0.12)] transition-all duration-300 hover:-translate-y-1 flex flex-col border-4 border-gray-300/60 cursor-pointer"
+        style={{ height: '380px' }}
+      >
+      <div className="relative flex-1 overflow-hidden">
       {Array.isArray(outfit.clothingImageUrls) && outfit.clothingImageUrls.length > 0 ? (
         <div className={`grid h-full ${outfit.clothingImageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {outfit.clothingImageUrls.slice(0, 4).map((url, idx) => (
@@ -42,17 +54,19 @@ const OutfitHistoryCard = ({ outfit, onLike, onDislike, isLiked = false }) => (
           <ThumbsDown className="w-4 h-4 relative z-10" />
         </button>
       </div>
-    </div>
+      </div>
 
-    <div className="p-4 bg-white/50 backdrop-blur-sm">
+      <div className="p-4 bg-white/50 backdrop-blur-sm">
       <p className="text-sm font-semibold text-brand-dark mb-1">
         {Array.isArray(outfit.clothingImageUrls) ? `${outfit.clothingImageUrls.length} prendas` : 'Outfit'}
       </p>
       {outfit.totalScore != null && (
         <p className="text-xs text-brand-dark/60">Score: {Math.round(outfit.totalScore)}%</p>
       )}
-    </div>
-  </div>
-);
+      </div>
+      </div>
+    </>
+  );
+};
 
 export default OutfitHistoryCard;
